@@ -30,10 +30,17 @@ author: d. gauchard
 #ifndef GLUE_STUB_H
 #define GLUE_STUB_H
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 #include "ets_sys.h"
 #include "osapi.h"
 #include "user_interface.h"
 #include "esp-missing.h"
+#ifdef __cplusplus
+}
+#endif
 
 #include "gluedebug.h"
 #include "uprint.h"
