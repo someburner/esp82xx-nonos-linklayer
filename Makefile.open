@@ -5,8 +5,11 @@ $(shell makefiles/patch-non-local-includes \
 )
 
 SDK=$(PREFIX)/xtensa-lx106-elf/sysroot/usr
-LWIP_LIB_RELEASE=$(SDK)/lib/liblwip2.a
+LWIP_LIB_RELEASE_DIR=$(SDK)/lib
 LWIP_INCLUDES_RELEASE=$(SDK)/include/lwip2
+
+# stable MSS: 536..896
+# unstable: 1024 1460
 
 %:
 	make -f makefiles/Makefile.build-lwip2 \
@@ -15,7 +18,20 @@ LWIP_INCLUDES_RELEASE=$(SDK)/include/lwip2
 			SDK=$(SDK) \
 			LWIP_ESP=$(abspath include-esp) \
 			LWIP_LIB=liblwip2.a \
-			LWIP_LIB_RELEASE=$(LWIP_LIB_RELEASE) \
+			LWIP_LIB_RELEASE=$(LWIP_LIB_RELEASE_DIR)/liblwip2.a \
 			LWIP_INCLUDES_RELEASE=$(LWIP_INCLUDES_RELEASE) \
 			TOOLS=$(PREFIX)/bin/xtensa-lx106-elf- \
+			TCP_MSS=536 BUILD=build-536 \
+			$@
+
+	make -f makefiles/Makefile.build-lwip2 \
+			target=open \
+			TARGET_NUM=2 \
+			SDK=$(SDK) \
+			LWIP_ESP=$(abspath include-esp) \
+			LWIP_LIB=liblwip2_1460.a \
+			LWIP_LIB_RELEASE=$(LWIP_LIB_RELEASE_DIR)/liblwip2_1460.a \
+			LWIP_INCLUDES_RELEASE=../include \
+			TOOLS=$(PREFIX)/bin/xtensa-lx106-elf- \
+			TCP_MSS=1460 BUILD=build-1460 \
 			$@

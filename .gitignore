@@ -1,6 +1,9 @@
 build/
+build-*/
 glue-lwip/lwip-err-t.h
 glue-lwip/lwip-git-hash.h
 liblwip2.a
+liblwip2_*.a
+liblwip2-*.a
 patches/
 
