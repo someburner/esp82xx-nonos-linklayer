@@ -714,7 +714,8 @@ u8_t pbuf_free (struct pbuf *p)
 		return 1;
 	}
 
-	uerror("BAD CASE %p ref=%d tot_len=%d eb=%p\n", p, p->ref, p->tot_len, p->eb);
+	// never seen from the beginning (~1.5y), uerror => uprint, saves flash
+	uprint("BAD CASE %p ref=%d tot_len=%d eb=%p\n", p, p->ref, p->tot_len, p->eb);
 	return 0;
 }
 
@@ -747,6 +748,10 @@ void glue2esp_ifup (int netif_idx, uint32_t ip, uint32_t mask, uint32_t gw)
 	oldip = netif->ip_addr;
 	oldmask = netif->netmask;
 	oldgw = netif->gw;
+
+	uprint(DBG "glue2esp_ifup new %d.%d.%d.%d old %ld.%ld.%ld.%ld\n",
+		        ip & 0xff,         (ip >> 8) & 0xff,         (ip >> 16) & 0xff,         ip >> 24,
+		oldip.addr & 0xff, (oldip.addr >> 8) & 0xff, (oldip.addr >> 16) & 0xff, oldip.addr >> 24);
 
 	// change IPs
 	netif->ip_addr.addr = ip;
