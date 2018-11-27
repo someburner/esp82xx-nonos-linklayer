@@ -17,26 +17,47 @@ $(shell makefiles/patch-vendor-lwip14 \
 # unstable: 1024 1460
 
 %:
-	make -f makefiles/Makefile.build-lwip2 \
+	for v6 in 0 1; do \
+	for mss in 536 1460; do \
+	for feat in 0 1; do \
+		test \( $$feat = 0 \) -a \( $$v6 = 1 \) && continue; \
+		featname= ;\
+		test $$feat = 1 && featname=-feat ;\
+		make -f makefiles/Makefile.build-lwip2 \
 			target=open \
 			TARGET_NUM=2 \
 			SDK=$(SDK) \
 			LWIP_ESP=$(LWIP14_INCLUDE_DIR) \
-			LWIP_LIB=liblwip2.a \
-			LWIP_LIB_RELEASE=$(LWIP_LIB_RELEASE_DIR)/liblwip2.a \
+			LWIP_LIB=liblwip$$((2+4*v6))-$$mss$$featname.a \
+			LWIP_LIB_RELEASE=$(LWIP_LIB_RELEASE_DIR)/liblwip$$((2+4*v6))-$$mss$$featname.a \
 			LWIP_INCLUDES_RELEASE=$(LWIP_INCLUDES_RELEASE) \
 			TOOLS=$(PREFIX)/bin/xtensa-lx106-elf- \
-			TCP_MSS=536 BUILD=build-536 \
-			$@
+			TCP_MSS=$$mss LWIP_FEATURES=$$feat LWIP_IPV6=$$v6 \
+			BUILD=build-$$mss$$featname-v$$((4+2*v6)) \
+			$@ ; \
+	done; done; done
 
-	make -f makefiles/Makefile.build-lwip2 \
-			target=open \
-			TARGET_NUM=2 \
-			SDK=$(SDK) \
-			LWIP_ESP=$(LWIP14_INCLUDE_DIR) \
-			LWIP_LIB=liblwip2_1460.a \
-			LWIP_LIB_RELEASE=$(LWIP_LIB_RELEASE_DIR)/liblwip2_1460.a \
-			LWIP_INCLUDES_RELEASE=$(LWIP_INCLUDES_RELEASE) \
-			TOOLS=$(PREFIX)/bin/xtensa-lx106-elf- \
-			TCP_MSS=1460 BUILD=build-1460 \
-			$@
+# %:
+# 	make -f makefiles/Makefile.build-lwip2 \
+# 			target=open \
+# 			TARGET_NUM=2 \
+# 			SDK=$(SDK) \
+# 			LWIP_ESP=$(LWIP14_INCLUDE_DIR) \
+# 			LWIP_LIB=liblwip2.a \
+# 			LWIP_LIB_RELEASE=$(LWIP_LIB_RELEASE_DIR)/liblwip2.a \
+# 			LWIP_INCLUDES_RELEASE=$(LWIP_INCLUDES_RELEASE) \
+# 			TOOLS=$(PREFIX)/bin/xtensa-lx106-elf- \
+# 			TCP_MSS=536 BUILD=build-536 \
+# 			$@
+#
+# 	make -f makefiles/Makefile.build-lwip2 \
+# 			target=open \
+# 			TARGET_NUM=2 \
+# 			SDK=$(SDK) \
+# 			LWIP_ESP=$(LWIP14_INCLUDE_DIR) \
+# 			LWIP_LIB=liblwip2_1460.a \
+# 			LWIP_LIB_RELEASE=$(LWIP_LIB_RELEASE_DIR)/liblwip2_1460.a \
+# 			LWIP_INCLUDES_RELEASE=$(LWIP_INCLUDES_RELEASE) \
+# 			TOOLS=$(PREFIX)/bin/xtensa-lx106-elf- \
+# 			TCP_MSS=1460 BUILD=build-1460 \
+# 			$@
