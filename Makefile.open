@@ -11,6 +11,7 @@ LWIP_INCLUDES_RELEASE=$(SDK)/include/lwip2
 %:
 	make -f makefiles/Makefile.build-lwip2 \
 			target=open \
+			TARGET_NUM=2 \
 			SDK=$(SDK) \
 			LWIP_ESP=$(abspath include-esp) \
 			LWIP_LIB=liblwip2.a \
