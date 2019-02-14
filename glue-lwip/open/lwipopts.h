@@ -2985,7 +2985,7 @@
 // so we do not define it. sntp server can come from dhcp server, or by
 // user.
 //#define SNTP_SERVER_ADDRESS	"pool.ntp.org"			// default
-#define SNTP_GET_SERVERS_FROM_DHCP	1
+#define SNTP_GET_SERVERS_FROM_DHCP	3
 #define SNTP_SET_SYSTEM_TIME(t)		(sntp_set_system_time(t))	// implemented in lwip2-sntp.c
 
 /*
