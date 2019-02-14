@@ -1,26 +1,26 @@
 
 /*
 
-Redistribution and use in source and binary forms, with or without modification, 
-are permitted provided that the following conditions are met: 
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
 
-1. Redistributions of source code must retain the above copyright notice, 
-this list of conditions and the following disclaimer. 
-2. Redistributions in binary form must reproduce the above copyright notice, 
-this list of conditions and the following disclaimer in the documentation 
-and/or other materials provided with the distribution. 
-3. The name of the author may not be used to endorse or promote products 
-derived from this software without specific prior written permission. 
+1. Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation
+and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+derived from this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS AND ANY EXPRESS OR IMPLIED 
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
-SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
-EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
-OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
-IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY 
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
 
 author: d. gauchard
@@ -128,31 +128,6 @@ err_glue_t esp2glue_err (err_glue_t err)
 	}
 };
 
-
-glue_netif_flags_t esp2glue_netif_flags (u8_t flags)
-{
-
-//XXXFIXME this is the paranoia mode
-// make it simpler in non-debug mode
-
-	u8_t copy = flags;
-	glue_netif_flags_t gf = 0;
-	#define CF(x)	do { if (flags & NETIF_FLAG_##x) { gf |= GLUE_NETIF_FLAG_##x; flags &= ~NETIF_FLAG_##x; } } while (0)
-	CF(UP);
-	CF(BROADCAST);
-	//CF(POINTTOPOINT);
-	//CF(DHCP);
-	CF(LINK_UP);
-	CF(ETHARP);
-	//CF(ETHERNET);
-	CF(IGMP);
-	#undef CF
-
-	if (flags)
-		uerror("ERROR: esp2glue_netif_flags: remaining flags not converted (0x%x->0x%x)\n", copy, flags);
-	return gf;
-}
-
 ///////////////////////////////////////
 // display helpers
 
@@ -176,7 +151,7 @@ static void stub_display_netif_flags (int flags)
 
 static void stub_display_netif (struct netif* netif)
 {
-	uprint("esp-@%p idx=%d %s name=%c%c%d state=%p ",
+	uprint(DBG "esp-@%p idx=%d %s name=%c%c%d state=%p ",
 		netif, netif->num,
 		netif->num == SOFTAP_IF? "AP": netif->num == STATION_IF? "STA": "???",
 		netif->name[0], netif->name[1], netif->num,
@@ -277,15 +252,25 @@ static void pbuf_wrapper_release (struct pbuf_wrapper* p)
 
 err_glue_t glue2esp_linkoutput (int netif_idx, void* ref2save, void* data, size_t size)
 {
+    struct netif* netif = netif_esp[netif_idx];
+	if (!netif)
+	{
+		uprint(DBG "glue2esp_linkoutput: if %d not initialized\n", netif_idx);
+		return GLUE_ERR_IF;
+	}
+
 	struct pbuf_wrapper* p = pbuf_wrapper_get();
 	if (!p)
+	{
+		uprint(DBG "glue2esp_linkoutput(if %d): memory full\n", netif_idx);
 		return GLUE_ERR_MEM;
+	}
 
 	uassert(p->pbuf.type == PBUF_CUSTOM_TYPE_POOLED);
 	uassert(p->pbuf.flags == 0);
 	uassert(p->pbuf.next == NULL);
 	uassert(p->pbuf.eb == NULL);
-	
+
 	p->pbuf.payload = data;
 	p->pbuf.len = p->pbuf.tot_len = size;
 	p->pbuf.ref = 0;
@@ -296,16 +281,18 @@ err_glue_t glue2esp_linkoutput (int netif_idx, void* ref2save, void* data, size_
 		&p->pbuf,
 		ref2save,
 		netif_idx);
-	
+
 	// call blobs
 	// blobs will call pbuf_free() back later
 	// we will retrieve our ref2save and give it back to glue
 
-	struct netif* netif = netif_esp[netif_idx];
 	err_t err = netif->linkoutput(netif, &p->pbuf);
 	if (err != ERR_OK)
+	{
 		// blob/phy is exhausted, release memory
 		pbuf_wrapper_release(p);
+		uprint(DBG "glue2esp_linkoutput: error %d\n", err);
+	}
 	return esp2glue_err(err);
 }
 
@@ -324,14 +311,14 @@ err_t etharp_output (struct netif* netif, struct pbuf* q, ip_addr_t* ipaddr)
 	uerror("ERROR: STUB etharp_output should not be called\n");
 	return ERR_ABRT;
 }
-                   
+
 err_t ethernet_input (struct pbuf* p, struct netif* netif)
 {
 	uprint(DBG "received pbuf@%p (pbuf: %dB ref=%d eb=%p) on netif ", p, p->tot_len, p->ref, p->eb);
 	stub_display_netif(netif);
-	
+
 	uassert(p->tot_len == p->len && p->ref == 1);
-	
+
 #if UDUMP
 	// dump packets for me (direct or broadcast)
 	if (   memcmp((const char*)p->payload, netif->hwaddr, 6) == 0
@@ -370,11 +357,12 @@ void dhcps_start (struct ip_info* info)
 	uprint(DBG "dhcps_start ");
 	display_ip_info(info);
 	uprint("\n");
-	
+
 	if (netif_ap)
 		///XXX this is mandatory for blobs to be happy
 		// but we should get this info back through glue
-	 	netif_ap->flags |= NETIF_FLAG_UP | NETIF_FLAG_LINK_UP;
+		//netif_ap->flags |= NETIF_FLAG_UP | NETIF_FLAG_LINK_UP;
+		esp2glue_netif_set_up1down0(netif_ap->num, 1);
 
  	esp2glue_dhcps_start(info);
 }
@@ -420,6 +408,44 @@ void dhcp_stop (struct netif* netif)
 static int esp_netif_num = 0;
 static struct netif* esp_netif_list = NULL;
 
+static int netif_is_new (struct netif* netif)
+{
+	struct netif* test_netif_sta = eagle_lwip_getif(STATION_IF);
+	struct netif* test_netif_ap = eagle_lwip_getif(SOFTAP_IF);
+	uprint(DBG "check netif @%p (sta@%p ap@%p)\n", netif, test_netif_sta, test_netif_ap);
+	int goodnum = -1;
+	if (netif == test_netif_sta)
+		goodnum = STATION_IF;
+	else if (netif == test_netif_ap)
+		goodnum = SOFTAP_IF;
+	else
+		uerror(DBG "netif_blorgl: not AP nor STA netif ???\n");
+
+	netif->num = goodnum;
+	if (netif_esp[goodnum] == eagle_lwip_getif(goodnum))
+	{
+		uprint(DBG "netif (%d): already added\n", netif->num);
+		return 0; // not new
+	}
+
+	netif->num = goodnum;
+
+	uprint(DBG "NEW netif\n");
+	stub_display_netif(netif);
+
+	// check if interfaces are added in the good order
+	uassert(esp_netif_num == netif->num);
+
+	esp_netif_num++;
+	netif->next = esp_netif_list;
+	esp_netif_list = netif;
+
+	uassert(!netif_esp[netif->num]);
+	netif_esp[netif->num] = netif;
+
+	return 1; // is new
+}
+
 struct netif* netif_add (
 	struct netif* netif,
 	ip_addr_t* ipaddr,
@@ -429,15 +455,15 @@ struct netif* netif_add (
 	netif_init_fn init,
 	netif_input_fn packet_incoming)
 {
-	uprint(DBG "netif_add ");
-	stub_display_netif(netif);
-	
+	uprint(DBG "netif_add\n");
+
 	//////////////////////////////
 	// this is revisited ESP lwip implementation
 	netif->ip_addr.addr = 0;
 	netif->netmask.addr = 0;
 	netif->gw.addr = 0;
 	netif->flags = 0;
+
 	#if LWIP_DHCP
 	// ok
 	netif->dhcp = NULL;
@@ -466,7 +492,7 @@ struct netif* netif_add (
 		#endif /* ENABLE_LOOPBACK */
 	netif->state = state;
 
-	uassert(packet_incoming = ethernet_input);
+	uassert(packet_incoming == ethernet_input);
 	netif->input = ethernet_input;
 
 		#if LWIP_NETIF_HWADDRHINT
@@ -478,77 +504,18 @@ struct netif* netif_add (
 		netif->loop_cnt_current = 0;
 		#endif /* ENABLE_LOOPBACK && LWIP_LOOPBACK_MAX_PBUFS */
 
-	//XXX init() is from blobs to call blobs, unknown effect yet
+	// init() is from blobs to call blobs:
+	// update: at least mtu is set by this function
 	if (init(netif) != ERR_OK)
 	{
-		uprint("ERROR netif_add: caller's init() failed\n");
+		uprint(DBG "ERROR netif_add: caller's init() failed\n");
 		return NULL;
 	}
 
-#if 1
-	struct netif* test_netif_sta = eagle_lwip_getif(STATION_IF);
-	struct netif* test_netif_ap = eagle_lwip_getif(SOFTAP_IF);
-	if (netif == test_netif_sta)
-		netif->num = STATION_IF;
-	else if (netif == test_netif_ap)
-		netif->num = SOFTAP_IF;
-	else 
-		uerror("LWIP: esp/netif_add: not AP nor STA netif ???\n");
-	if (netif->num < esp_netif_num)
-		// already added
-		esp2glue_netif_set_addr(netif->num, ipaddr->addr, netmask->addr, gw->addr);
-	else
-	{
-		// check if interfaces are added in the good order
-		uassert(esp_netif_num == netif->num);
-
-		esp_netif_num++;
-		netif->next = esp_netif_list;
-		esp_netif_list = netif;
-
-		uassert(!netif_esp[netif->num]);
-		netif_esp[netif->num] = netif;
-
-		esp2glue_netif_add(netif->num, ipaddr->addr, netmask->addr, gw->addr, netif->hwaddr_len, netif->hwaddr, netif->mtu);
-	}
-#else
-// buggy
-	if (esp_netif_num > 1)
-	{
-		if (netif == netif_sta)
-		{
-			uprint(DBG "esp trying to re-add STA\n");
-			uassert(netif->num == STATION_IF);
-		}
-		else if (netif == netif_ap)
-		{
-			uprint(DBG "esp trying to re-add AP\n");
-			uassert(netif->num == SOFTAP_IF);
-		}
-		else
-			uerror(DBG "esp/netif_add:num=%d (glue has seen $d interfaces)\n", netif->num, esp_netif_num);
-
-		// assume hwaddr has not changed
-		esp2glue_netif_set_addr(netif->num, ipaddr->addr, netmask->addr, gw->addr);
-	}
-	else
-	{
-		netif->num = esp_netif_num++;
-		netif->next = esp_netif_list;
-		esp_netif_list = netif;
-
-		uassert(!netif_esp[netif->num]);
-		netif_esp[netif->num] = netif;
-
-		esp2glue_netif_add(netif->num, ipaddr->addr, netmask->addr, gw->addr, netif->hwaddr_len, netif->hwaddr, netif->mtu);
-	}
-#endif
-
-	//////////////////////////////
-	
-	netif->flags |= NETIF_FLAG_LINK_UP;
+	uprint(DBG "netif_add(ip:%x) -> ", (int)ipaddr->addr);
+	netif->flags |= NETIF_FLAG_LINK_UP; // !!!!! mandatory !!!!! (enable reception)
 	netif_set_addr(netif, ipaddr, netmask, gw);
-	
+
 	return netif;
 }
 
@@ -558,18 +525,34 @@ void netif_remove (struct netif* netif)
 	(void)netif;
 	uprint(DBG "trying to remove netif ");
 	stub_display_netif(netif);
-	
+
 	// don't, see netif_set_down()
 	//esp2glue_netif_set_updown(netif->num, 0);
 	//netif->flags &= ~NETIF_FLAG_LINK_UP;
 	(void)netif;
 }
 
+static err_t voidinit (struct netif* netif)
+{
+	(void)netif;
+	return ERR_OK;
+}
+
 void netif_set_addr (struct netif* netif, ip_addr_t* ipaddr, ip_addr_t* netmask, ip_addr_t* gw)
 {
+	uprint(DBG "netif_set_addr(%x->%x)\n", (int)netif->ip_addr.addr, (int)ipaddr->addr);
+	if (netif_is_new(netif))
+	{
+		// interface not yet properly added
+		netif_add(netif, ipaddr, netmask, gw, netif->state, voidinit, ethernet_input);
+		// netif_add() calls netif_set_addr()
+		return;
+	}
+
 	netif->ip_addr.addr = ipaddr->addr;
 	netif->netmask.addr = netmask->addr;
 	netif->gw.addr = gw->addr;
+	uassert(netif->input == ethernet_input);
 
 	// tell blobs
 	struct ip_info set;
@@ -578,10 +561,9 @@ void netif_set_addr (struct netif* netif, ip_addr_t* ipaddr, ip_addr_t* netmask,
 	set.gw.addr = gw->addr;
 	wifi_set_ip_info(netif->num, &set);
 
-	uprint(DBG "netif_set_addr ");
 	stub_display_netif(netif);
-	
-	esp2glue_netif_set_addr(netif->num, ipaddr->addr, netmask->addr, gw->addr);
+
+	esp2glue_netif_update(netif->num, ipaddr->addr, netmask->addr, gw->addr, netif->hwaddr_len, netif->hwaddr, netif->mtu);
 }
 
 void netif_set_default (struct netif* netif)
@@ -595,11 +577,13 @@ void netif_set_down (struct netif* netif)
 {
 	uprint(DBG "netif_set_down  ");
 	stub_display_netif(netif);
-	
-	// dont set down. some esp8266 (wemos D1 not mini) will:
-	// * esp2glue_netif_set_updown
+
+	// dont set down. some esp8266 will:
+	// * esp2glue_netif_set_down(sta)
 	// * restart dhcp-client _without_ netif_set_up.
-	// another one (D1 mini) does not call set_down()
+	// or:
+	// * esp2glue_netif_set_down(ap)
+	// * restart dhcp-server _without_ netif_set_up.
 
 	// netif->flags &= ~(NETIF_FLAG_UP |  NETIF_FLAG_LINK_UP);
 	// esp2glue_netif_set_updown(netif->num, 0);
@@ -608,10 +592,11 @@ void netif_set_down (struct netif* netif)
 
 void netif_set_up (struct netif* netif)
 {
+	uprint(DBG "netif_set_up\n");
 	stub_display_netif(netif);
 
 	netif->flags |= (NETIF_FLAG_UP |  NETIF_FLAG_LINK_UP);
-	esp2glue_netif_set_updown(netif->num, 1);
+	esp2glue_netif_set_up1down0(netif->num, 1);
 }
 
 struct pbuf* pbuf_alloc (pbuf_layer layer, u16_t length, pbuf_type type)
@@ -621,12 +606,12 @@ struct pbuf* pbuf_alloc (pbuf_layer layer, u16_t length, pbuf_type type)
 
 	//STUB(pbuf_alloc);
 	//pbuf_info("pbuf_alloc", layer, length, type);
-	
+
 	u16_t offset = 0;
 	if (layer == PBUF_RAW && type == PBUF_RAM)
 	{
 		offset += EP_OFFSET;
-		
+
 		/* If pbuf is to be allocated in RAM, allocate memory for it. */
 		size_t alloclen = LWIP_MEM_ALIGN_SIZE(SIZEOF_STRUCT_PBUF + offset) + LWIP_MEM_ALIGN_SIZE(length);
 		struct pbuf* p = (struct pbuf*)mem_malloc(alloclen);
@@ -643,7 +628,7 @@ struct pbuf* pbuf_alloc (pbuf_layer layer, u16_t length, pbuf_type type)
 		uprint(DBG "pbuf_alloc(RAW/RAM)-> %p %dB type=%d\n", p, alloclen, type);
 		return p;
 	}
-	
+
 	if (layer == PBUF_RAW && type == PBUF_REF)
 	{
 		//unused: offset += EP_OFFSET;
@@ -663,7 +648,7 @@ struct pbuf* pbuf_alloc (pbuf_layer layer, u16_t length, pbuf_type type)
 	}
 
 	uerror(DBG "pbuf_alloc BAD CASE\n");
-		
+
 	return NULL;
 }
 
@@ -673,11 +658,11 @@ u8_t pbuf_free (struct pbuf *p)
 	uprint(DBG "pbuf_free(%p) ref=%d type=%d\n", p, p->ref, p->type);
 	//pbuf_info("pbuf_free", -1, p->len, p->type);
 	//uprint("pbuf@%p ref=%d tot_len=%d eb=%p\n", p, p->ref, p->tot_len, p->eb);
-	
+
 	#if LWIP_SUPPORT_CUSTOM_PBUF
 	#error LWIP_SUPPORT_CUSTOM_PBUF is defined
 	#endif
-	
+
 	uassert(p->ref == 1);
 
 	if (p->type == PBUF_CUSTOM_TYPE_POOLED)
@@ -691,17 +676,14 @@ u8_t pbuf_free (struct pbuf *p)
 		uassert(pw->ref2save);
 		esp2glue_pbuf_freed(pw->ref2save);
 		pbuf_wrapper_release(pw);
-			
+
 		return 1;
 	}
-		
+
 	if (   !p->next
 	    && p->ref == 1
-	    && (
-		   p->type == PBUF_RAM
-		|| p->type == PBUF_REF
-	      //|| p->type == PBUF_ESF_RX
-	       ))
+		&& (p->type == PBUF_RAM || p->type == PBUF_REF)
+		)
 	{
 		if (p->eb)
 			system_pp_recycle_rx_pkt(p->eb);
@@ -741,7 +723,7 @@ void glue2esp_ifup (int netif_idx, uint32_t ip, uint32_t mask, uint32_t gw)
 	oldip = netif->ip_addr;
 	oldmask = netif->netmask;
 	oldgw = netif->gw;
-	        
+
 	// change ips
 	netif->ip_addr.addr = ip;
 	netif->netmask.addr = mask;
