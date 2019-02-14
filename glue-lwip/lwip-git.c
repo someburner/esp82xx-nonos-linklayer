@@ -1,26 +1,26 @@
 
 /*
 
-Redistribution and use in source and binary forms, with or without modification, 
-are permitted provided that the following conditions are met: 
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
 
-1. Redistributions of source code must retain the above copyright notice, 
-this list of conditions and the following disclaimer. 
-2. Redistributions in binary form must reproduce the above copyright notice, 
-this list of conditions and the following disclaimer in the documentation 
-and/or other materials provided with the distribution. 
-3. The name of the author may not be used to endorse or promote products 
-derived from this software without specific prior written permission. 
+1. Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation
+and/or other materials provided with the distribution.
+3. The name of the author may not be used to endorse or promote products
+derived from this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS AND ANY EXPRESS OR IMPLIED 
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT 
-SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
-EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
-OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
-IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY 
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 OF SUCH DAMAGE.
 
 author: d. gauchard
@@ -79,10 +79,10 @@ err_t glue2git_err (err_glue_t err)
 	case GLUE_ERR_RST        : return ERR_RST;
 	case GLUE_ERR_CLSD       : return ERR_CLSD;
 	case GLUE_ERR_ARG        : return ERR_ARG;
-	
+
 	default: return ERR_ABRT;
 	}
-};	
+};
 
 err_glue_t git2glue_err (err_t err)
 {
@@ -108,7 +108,7 @@ err_glue_t git2glue_err (err_t err)
 
 	default: return GLUE_ERR_ABRT;
 	}
-};	
+};
 
 #if UDEBUG
 
@@ -294,7 +294,7 @@ static void netif_sta_status_callback (struct netif* netif)
 {
 	uprint(DBG "netif status callback ");
 	new_display_netif(netif);
-	
+
 	if (netif->flags & NETIF_FLAG_LINK_UP)
 	{
 		// tell ESP that link is up
@@ -304,7 +304,7 @@ static void netif_sta_status_callback (struct netif* netif)
 		{
 			// this is our default route
 			netif_set_default(netif);
-			
+
 			if (netif->ip_addr.addr)
 			{
 				// restart sntp
@@ -323,7 +323,7 @@ static void netif_init_common (struct netif* netif)
 	// meaningfull:
 	netif->output = etharp_output;
 	netif->linkoutput = new_linkoutput;
-	
+
 	netif->hostname = wifi_station_get_hostname();
 	netif->chksum_flags = NETIF_CHECKSUM_ENABLE_ALL;
 	// netif->mtu given by glue
@@ -332,13 +332,13 @@ static void netif_init_common (struct netif* netif)
 static err_t netif_init_sta (struct netif* netif)
 {
 	uprint(DBG "netif_sta_init\n");
-	
+
 	netif->name[0] = 's';
 	netif->name[1] = 't';
 	netif->status_callback = netif_sta_status_callback; // need to tell esp-netif-sta is up
-	
+
 	netif_init_common(netif);
-	
+
 	return ERR_OK;
 }
 
@@ -349,7 +349,7 @@ static err_t netif_init_ap (struct netif* netif)
 	netif->name[0] = 'a';
 	netif->name[1] = 'p';
 	netif->status_callback = NULL; // esp-netif-ap is made up by esp
-	
+
 	netif_init_common(netif);
 
 	return ERR_OK;
@@ -366,7 +366,16 @@ void esp2glue_netif_update (int netif_idx, uint32_t ip, uint32_t mask, uint32_t 
 		netif->hwaddr_len = hwlen;
 		memcpy(netif->hwaddr, hwaddr, netif->hwaddr_len = hwlen);
 	}
-	
+
+	// properly set netif state according to IP address
+	// (we could pass netif flags though)
+	// so we don't later tell esp that we are up with a bad(=0) IP address
+	// (fixes sdk-2.2.1 disconnection/reconnection bug)
+	if (ip)
+		netif->flags |= NETIF_FLAG_LINK_UP | NETIF_FLAG_UP;
+	else
+		netif->flags &= ~(NETIF_FLAG_LINK_UP | NETIF_FLAG_UP);
+
 	netif->mtu = mtu;
 	netif->hostname = wifi_station_get_hostname();
 	ip4_addr_t aip = { ip }, amask = { mask }, agw = { gw };
@@ -383,7 +392,7 @@ void esp2glue_lwip_init (void)
 {
 	uprint(DBG "lwip_init\n");
 	lwip_init();
-	
+
 	// we *must* add new interfaces ourselves so interface index are correct
 	// esp may call netif_add() with idx=1 before idx=0
 	ip4_addr_t aip = { 0 }, amask = { 0 }, agw = { 0 };
@@ -395,7 +404,7 @@ void esp2glue_lwip_init (void)
 		netif_git[i].hwaddr_len = NETIF_MAX_HWADDR_LEN;
 		memset(netif_git[i].hwaddr, 0, NETIF_MAX_HWADDR_LEN);
 	}
-	
+
 	sntp_servermode_dhcp(1); /* get SNTP server via DHCP */
 	sntp_setoperatingmode(SNTP_OPMODE_POLL);
 	// start anyway the offline sntp timer
@@ -420,7 +429,7 @@ err_glue_t esp2glue_ethernet_input (int netif_idx, void* received)
 	//uprint(DBG "input idx=%d netif-flags=0x%x ", netif_idx, netif_git[netif_idx].flags);
 	//display_ip32(" ip=", netif_git[netif_idx].ip_addr.addr);
 	//nl();
-	
+
 	return git2glue_err(ethernet_input((struct pbuf*)received, &netif_git[netif_idx]));
 }
 

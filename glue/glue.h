@@ -67,10 +67,13 @@ extern int os_printf_plus(const char * format, ...) __attribute__ ((format (prin
 
 #define uerror(x...)		do { UPRINTF(x); } while (0)
 
+#define udoassert(assertion...)   do { if ((assertion) == 0) { UPRINTF("assert fail: " #assertion " @%s:%d\n", __FILE__, __LINE__); uhalt(); } } while (0)
+#define ualwaysassert(assertion...)	udoassert(assertion)
+
 #if UNDEBUG
 #define uassert(assertion...)   do { (void)0; } while (0)
 #else
-#define uassert(assertion...)	do { if ((assertion) == 0) { UPRINTF("assert fail: " #assertion " @%s:%d\n", __FILE__, __LINE__); uhalt(); } } while (0)
+#define uassert(assertion...)	udoassert(assertion)
 #endif // !defined(UNDEBUG)
 
 #define uhalt()			do { *((char*)0) = 0; } while (0)
