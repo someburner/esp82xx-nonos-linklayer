@@ -1,0 +1,5 @@
+build/
+glue-lwip/lwip-err-t.h
+liblwip2.a
+patches/
+
