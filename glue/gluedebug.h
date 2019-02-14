@@ -5,6 +5,7 @@
 // this is needed separately from lwipopts.h
 // because it is shared by both sides of glue
 
+#define UNDEBUG		1	// 0 or 1 (1: uassert removed)
 #define UDEBUG		0	// 0 or 1 (glue debug)
 #define UDUMP		0	// 0 or 1 (glue / dump packet)
 #define UDEBUGINDEX	0	// 0 or 1 (show debug line number)
