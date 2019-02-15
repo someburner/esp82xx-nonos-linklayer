@@ -9,9 +9,9 @@
 
 uint32_t r_rand (void);
 
-void* pvPortZalloc (size_t, const char*, int);
-void* pvPortMalloc (size_t xWantedSize, const char* file, int line) __attribute__((malloc, alloc_size(1)));
-void vPortFree (void *ptr, const char* file, int line);
+void *pvPortZalloc (size_t sz, const char *, unsigned);
+void *pvPortMalloc (size_t sz, const char *, unsigned) __attribute__((malloc, alloc_size(1)));
+void vPortFree (void *p, const char *, unsigned);
 
 struct netif* eagle_lwip_getif (int netif_index);
 
@@ -29,7 +29,7 @@ void *ets_memcpy (void *dest, const void *src, size_t n);
 
 typedef void ETSTimerFunc(void *timer_arg);
 void ets_timer_disarm (ETSTimer *a);
-void ets_timer_arm_new (ETSTimer *a, int b, int c, int isMstimer);
+void ets_timer_arm_new(os_timer_t *ptimer, uint32_t time, bool repeat_flag, bool ms_flag);
 void ets_timer_setfn (ETSTimer *t, ETSTimerFunc *fn, void *parg);
 
 struct ip_addr;
