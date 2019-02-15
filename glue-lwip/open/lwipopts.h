@@ -3003,8 +3003,9 @@
 struct pbuf;
 struct netif;
 #ifndef LWIP_ERR_T
-#define LWIP_ERR_T s8_t
+#error LWIP_ERR_T definition should come from lwip1.4 from espressif
 #endif
+//#define LWIP_ERR_T s8_t
 LWIP_ERR_T lwip_unhandled_packet (struct pbuf* pbuf, struct netif* netif) __attribute__((weak));
 
 /*
