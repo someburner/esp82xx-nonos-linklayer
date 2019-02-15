@@ -20,6 +20,9 @@ patches: .patched
 
 .patched:
 	patch -d .. -p1 < ../../patches/time-wait.patch
+ifeq ($(target),open)
+	patch -d .. -p1 < ../../patches/sdk-mem-macros.patch
+endif
 	touch .patched
 
 include ../../makefiles/Makefile.defs
