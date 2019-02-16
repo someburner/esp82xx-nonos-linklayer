@@ -1,9 +1,4 @@
 
-$(shell makefiles/patch-non-local-includes \
-	$(PREFIX)/xtensa-lx106-elf/sysroot/usr/include/user_interface.h \
-	$(PREFIX)/xtensa-lx106-elf/sysroot/usr/include/sntp.h \
-)
-
 SDK=$(PREFIX)/xtensa-lx106-elf/sysroot/usr
 LWIP14_INCLUDE_DIR=$(PREFIX)/../sdk/third_party/include
 LWIP_LIB_RELEASE_DIR=$(SDK)/lib
@@ -11,6 +6,10 @@ LWIP_INCLUDES_RELEASE=$(SDK)/include/lwip2
 
 $(shell makefiles/patch-vendor-lwip14 \
 	$(LWIP14_INCLUDE_DIR) \
+)
+
+$(shell makefiles/patch-non-local-includes \
+	$(PREFIX)/xtensa-lx106-elf/sysroot/usr/include \
 )
 
 # stable MSS: 536..896
