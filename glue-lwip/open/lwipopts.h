@@ -2392,7 +2392,7 @@
  * All addresses that have a scope according to the default policy (link-local
  * unicast addresses, interface-local and link-local multicast addresses) should
  * now have a zone set on them before being passed to the core API, although
- * lwIP will currently attempt to select a zone on the caller's behalf when 
+ * lwIP will currently attempt to select a zone on the caller's behalf when
  * necessary. Applications that directly assign IPv6 addresses to interfaces
  * (which is NOT recommended) must now ensure that link-local addresses carry
  * the netif's zone. See the new ip6_zone.h header file for more information and
@@ -3541,6 +3541,9 @@
 //#define SNTP_SERVER_ADDRESS	"pool.ntp.org"			// default
 #define SNTP_GET_SERVERS_FROM_DHCP	3
 #define SNTP_SET_SYSTEM_TIME(t)		(sntp_set_system_time(t))	// implemented in lwip2-sntp.c
+
+// lwip-1.4 had 3 possible SNTP servers (constant was harcoded)
+#define SNTP_MAX_SERVERS                3
 
 /*
    --------------------------------------------------
