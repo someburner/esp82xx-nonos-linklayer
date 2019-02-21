@@ -416,6 +416,11 @@ void esp2glue_lwip_init (void)
 #endif
 }
 
+void esp2glue_espconn_init(void)
+{
+	espconn_init();
+}
+
 void esp2glue_alloc_for_recv (size_t len, void** pbuf, void** data)
 {
 	*pbuf = pbuf_alloc(PBUF_RAW, len, PBUF_RAM);

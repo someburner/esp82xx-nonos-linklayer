@@ -387,10 +387,10 @@ void dhcps_start (struct ip_info* info)
 
 void espconn_init (void)
 {
-	// not implemented yet
 	// called at boot/reset
 	// annoying message to hide:
 	//STUB(espconn_init);
+	esp2glue_espconn_init();
 }
 
 void dhcp_cleanup (struct netif* netif)
@@ -586,7 +586,7 @@ void netif_set_default (struct netif* netif)
 {
 	uprint(DBG "netif_set_default %d\n", netif->num);
 	netif_default = netif;
-	
+
 	// do not let sdk control lwip2's default interface
 	// (softAP setting it to AP interface breaks routing,
 	//  lwIP knows how to route)
